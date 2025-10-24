@@ -1,0 +1,723 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local localPlayer = Players.LocalPlayer
+
+-- Проверка что мы в игре
+if not localPlayer then
+    warn("LocalPlayer не найден ептеть моптеть")
+    return
+end
+
+while not localPlayer.Character do
+    wait(1)
+end
+
+print("Инициализация брат...")
+
+local DEFAULT_SETTINGS = {
+    Enabled = true,
+    Size = 25,
+    Color = Color3.fromRGB(255, 50, 50),
+    Transparency = 0.7,
+    Visible = true,
+    TeamCheck = false,
+    WeaponHitbox = true,
+    PlayerHitbox = true,
+    AutoUpdate = true
+}
+
+local hitboxes = {}
+local connections = {}
+local settings = table.clone(DEFAULT_SETTINGS)
+
+local function createEnhancedUI()
+    local success, result = pcall(function()
+        local playerGui = localPlayer:WaitForChild("PlayerGui")
+        
+        local oldUI = playerGui:FindFirstChild("HitboxExpanderPremium")
+        if oldUI then
+            oldUI:Destroy()
+        end
+
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "HitboxExpanderPremium"
+        ScreenGui.Parent = playerGui
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        ScreenGui.ResetOnSpawn = false
+
+        local MainContainer = Instance.new("Frame")
+        MainContainer.Name = "MainContainer"
+        MainContainer.Size = UDim2.new(0, 450, 0, 550)
+        MainContainer.Position = UDim2.new(0, 50, 0.5, -275)
+        MainContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+        MainContainer.BackgroundTransparency = 0.05
+        MainContainer.BorderSizePixel = 0
+        MainContainer.Parent = ScreenGui
+
+        local UICorner = Instance.new("UICorner")
+        UICorner.CornerRadius = UDim.new(0, 15)
+        UICorner.Parent = MainContainer
+
+        local UIStroke = Instance.new("UIStroke")
+        UIStroke.Color = Color3.fromRGB(0, 200, 255)
+        UIStroke.Thickness = 2
+        UIStroke.Parent = MainContainer
+
+        local Header = Instance.new("Frame")
+        Header.Size = UDim2.new(1, 0, 0, 60)
+        Header.Position = UDim2.new(0, 0, 0, 0)
+        Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        Header.BorderSizePixel = 0
+        Header.Parent = MainContainer
+
+        local HeaderCorner = Instance.new("UICorner")
+        HeaderCorner.CornerRadius = UDim.new(0, 15)
+        HeaderCorner.Parent = Header
+
+        local Title = Instance.new("TextLabel")
+        Title.Size = UDim2.new(1, -80, 1, 0)
+        Title.Position = UDim2.new(0, 15, 0, 0)
+        Title.BackgroundTransparency = 1
+        Title.Text = "⚔️ HITBOX EXPANDER GG"
+        Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Title.Font = Enum.Font.GothamBold
+        Title.TextSize = 18
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.Parent = Header
+
+        local CloseButton = Instance.new("TextButton")
+        CloseButton.Name = "CloseButton"
+        CloseButton.Size = UDim2.new(0, 30, 0, 30)
+        CloseButton.Position = UDim2.new(1, -35, 0.5, -15)
+        CloseButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        CloseButton.Text = "X"
+        CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        CloseButton.Font = Enum.Font.GothamBold
+        CloseButton.TextSize = 14
+        CloseButton.Parent = Header
+
+        local CloseCorner = Instance.new("UICorner")
+        CloseCorner.CornerRadius = UDim.new(0, 8)
+        CloseCorner.Parent = CloseButton
+
+        local Content = Instance.new("Frame")
+        Content.Size = UDim2.new(1, -20, 1, -80)
+        Content.Position = UDim2.new(0, 10, 0, 70)
+        Content.BackgroundTransparency = 1
+        Content.Parent = MainContainer
+
+        local ContentLayout = Instance.new("UIListLayout")
+        ContentLayout.Padding = UDim.new(0, 10)
+        ContentLayout.Parent = Content
+
+        local StatsFrame = Instance.new("Frame")
+        StatsFrame.Size = UDim2.new(1, 0, 0, 80)
+        StatsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+        StatsFrame.Parent = Content
+
+        local StatsCorner = Instance.new("UICorner")
+        StatsCorner.CornerRadius = UDim.new(0, 10)
+        StatsCorner.Parent = StatsFrame
+
+        local StatsGrid = Instance.new("UIGridLayout")
+        StatsGrid.CellSize = UDim2.new(0.5, -5, 0.5, -5)
+        StatsGrid.CellPadding = UDim2.new(0, 10, 0, 5)
+        StatsGrid.Parent = StatsFrame
+
+        local function createStatItem(text, value, color)
+            local Item = Instance.new("Frame")
+            Item.BackgroundTransparency = 1
+            Item.Parent = StatsFrame
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, 0, 0.6, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = text
+            Label.TextColor3 = Color3.fromRGB(180, 180, 200)
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 11
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.Parent = Item
+
+            local Value = Instance.new("TextLabel")
+            Value.Size = UDim2.new(1, 0, 0.4, 0)
+            Value.Position = UDim2.new(0, 0, 0.6, 0)
+            Value.BackgroundTransparency = 1
+            Value.Text = value
+            Value.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+            Value.Font = Enum.Font.GothamBold
+            Value.TextSize = 14
+            Value.TextXAlignment = Enum.TextXAlignment.Left
+            Value.Parent = Item
+
+            return Value
+        end
+
+        local StatPlayers = createStatItem("Игроков онлайн", "0", Color3.fromRGB(100, 255, 100))
+        local StatHitboxes = createStatItem("Активных хитбоксов", "0", Color3.fromRGB(255, 200, 100))
+        local StatStatus = createStatItem("Статус", "АКТИВНО", Color3.fromRGB(100, 255, 100))
+        local StatSize = createStatItem("Размер", tostring(settings.Size), Color3.fromRGB(100, 200, 255))
+
+        local function createToggle(label, defaultValue, callback)
+            local ToggleFrame = Instance.new("Frame")
+            ToggleFrame.Size = UDim2.new(1, 0, 0, 40)
+            ToggleFrame.BackgroundTransparency = 1
+            ToggleFrame.Parent = Content
+
+            local ToggleLabel = Instance.new("TextLabel")
+            ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+            ToggleLabel.BackgroundTransparency = 1
+            ToggleLabel.Text = label
+            ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ToggleLabel.Font = Enum.Font.Gotham
+            ToggleLabel.TextSize = 14
+            ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleLabel.Parent = ToggleFrame
+
+            local ToggleButton = Instance.new("TextButton")
+            ToggleButton.Size = UDim2.new(0, 50, 0, 25)
+            ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
+            ToggleButton.BackgroundColor3 = defaultValue and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
+            ToggleButton.Text = ""
+            ToggleButton.Parent = ToggleFrame
+
+            local ToggleCorner = Instance.new("UICorner")
+            ToggleCorner.CornerRadius = UDim.new(1, 0)
+            ToggleCorner.Parent = ToggleButton
+
+            local ToggleDot = Instance.new("Frame")
+            ToggleDot.Size = UDim2.new(0, 19, 0, 19)
+            ToggleDot.Position = UDim2.new(defaultValue and 0.55 or 0.05, 0, 0.5, -9)
+            ToggleDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            ToggleDot.Parent = ToggleButton
+
+            local ToggleDotCorner = Instance.new("UICorner")
+            ToggleDotCorner.CornerRadius = UDim.new(1, 0)
+            ToggleDotCorner.Parent = ToggleDot
+
+            ToggleButton.MouseButton1Click:Connect(function()
+                defaultValue = not defaultValue
+                callback(defaultValue)
+                
+                local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(ToggleDot, tweenInfo, {
+                    Position = UDim2.new(defaultValue and 0.55 or 0.05, 0, 0.5, -9)
+                })
+                tween:Play()
+                
+                TweenService:Create(ToggleButton, tweenInfo, {
+                    BackgroundColor3 = defaultValue and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
+                }):Play()
+            end)
+
+            return ToggleFrame, function(newValue)
+                defaultValue = newValue
+                ToggleDot.Position = UDim2.new(defaultValue and 0.55 or 0.05, 0, 0.5, -9)
+                ToggleButton.BackgroundColor3 = defaultValue and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
+            end
+        end
+
+        local function createSlider(label, min, max, defaultValue, callback)
+            local SliderFrame = Instance.new("Frame")
+            SliderFrame.Size = UDim2.new(1, 0, 0, 60)
+            SliderFrame.BackgroundTransparency = 1
+            SliderFrame.Parent = Content
+
+            local SliderLabel = Instance.new("TextLabel")
+            SliderLabel.Size = UDim2.new(1, 0, 0, 20)
+            SliderLabel.BackgroundTransparency = 1
+            SliderLabel.Text = label
+            SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SliderLabel.Font = Enum.Font.Gotham
+            SliderLabel.TextSize = 14
+            SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+            SliderLabel.Parent = SliderFrame
+
+            local SliderValue = Instance.new("TextLabel")
+            SliderValue.Size = UDim2.new(0, 40, 0, 20)
+            SliderValue.Position = UDim2.new(1, -40, 0, 0)
+            SliderValue.BackgroundTransparency = 1
+            SliderValue.Text = tostring(defaultValue)
+            SliderValue.TextColor3 = Color3.fromRGB(0, 200, 255)
+            SliderValue.Font = Enum.Font.GothamBold
+            SliderValue.TextSize = 14
+            SliderValue.TextXAlignment = Enum.TextXAlignment.Right
+            SliderValue.Parent = SliderFrame
+
+            local SliderTrack = Instance.new("Frame")
+            SliderTrack.Size = UDim2.new(1, 0, 0, 6)
+            SliderTrack.Position = UDim2.new(0, 0, 0, 35)
+            SliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+            SliderTrack.Parent = SliderFrame
+
+            local SliderTrackCorner = Instance.new("UICorner")
+            SliderTrackCorner.CornerRadius = UDim.new(1, 0)
+            SliderTrackCorner.Parent = SliderTrack
+
+            local SliderFill = Instance.new("Frame")
+            SliderFill.Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0)
+            SliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+            SliderFill.Parent = SliderTrack
+
+            local SliderFillCorner = Instance.new("UICorner")
+            SliderFillCorner.CornerRadius = UDim.new(1, 0)
+            SliderFillCorner.Parent = SliderFill
+
+            local SliderThumb = Instance.new("TextButton")
+            SliderThumb.Size = UDim2.new(0, 20, 0, 20)
+            SliderThumb.Position = UDim2.new((defaultValue - min) / (max - min), -10, 0.5, -10)
+            SliderThumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            SliderThumb.Text = ""
+            SliderThumb.Parent = SliderTrack
+
+            local SliderThumbCorner = Instance.new("UICorner")
+            SliderThumbCorner.CornerRadius = UDim.new(1, 0)
+            SliderThumbCorner.Parent = SliderThumb
+
+            local dragging = false
+
+            local function updateSlider(value)
+                value = math.clamp(value, min, max)
+                local relativeX = (value - min) / (max - min)
+                
+                SliderValue.Text = tostring(value)
+                SliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+                SliderThumb.Position = UDim2.new(relativeX, -10, 0.5, -10)
+                
+                callback(value)
+            end
+
+            SliderThumb.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = true
+                end
+            end)
+
+            SliderThumb.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = false
+                end
+            end)
+
+            SliderTrack.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    local relativeX = (input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X
+                    relativeX = math.clamp(relativeX, 0, 1)
+                    local value = math.floor(min + relativeX * (max - min))
+                    updateSlider(value)
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    local relativeX = (input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X
+                    relativeX = math.clamp(relativeX, 0, 1)
+                    local value = math.floor(min + relativeX * (max - min))
+                    updateSlider(value)
+                end
+            end)
+
+            return SliderFrame
+        end
+
+        -- Создаем элементы управления
+        local EnabledToggle, updateEnabledToggle = createToggle("Включить хитбоксы", settings.Enabled, function(value)
+            settings.Enabled = value
+            StatStatus.Text = value and "АКТИВНО" : "ВЫКЛЮЧЕНО"
+            StatStatus.TextColor3 = value and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+            if not value then
+                clearAllHitboxes()
+            else
+                updateAllHitboxes()
+            end
+        end)
+
+        local PlayerToggle, updatePlayerToggle = createToggle("Хитбоксы пидоров(игроков) ", settings.PlayerHitbox, function(value)
+            settings.PlayerHitbox = value
+            updateAllHitboxes()
+        end)
+
+        local WeaponToggle, updateWeaponToggle = createToggle("Хитбоксы катаны", settings.WeaponHitbox, function(value)
+            settings.WeaponHitbox = value
+            updateAllHitboxes()
+        end)
+
+        local VisibleToggle, updateVisibleToggle = createToggle("ПОказывать хитбоксы", settings.Visible, function(value)
+            settings.Visible = value
+            updateAllHitboxes()
+        end)
+
+        local TeamToggle, updateTeamToggle = createToggle("Игнорировать команду", settings.TeamCheck, function(value)
+            settings.TeamCheck = value
+            updateAllHitboxes()
+        end)
+
+        local SizeSlider = createSlider("Размер выбери", 10, 50, settings.Size, function(value)
+            settings.Size = value
+            StatSize.Text = tostring(value)
+            updateAllHitboxes()
+        end)
+
+        local ActionsFrame = Instance.new("Frame")
+        ActionsFrame.Size = UDim2.new(1, 0, 0, 40)
+        ActionsFrame.BackgroundTransparency = 1
+        ActionsFrame.Parent = Content
+
+        local ApplyButton = Instance.new("TextButton")
+        ApplyButton.Size = UDim2.new(0.48, 0, 1, 0)
+        ApplyButton.Position = UDim2.new(0, 0, 0, 0)
+        ApplyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        ApplyButton.Text = "ПРИМЕНИТЬ"
+        ApplyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ApplyButton.Font = Enum.Font.GothamBold
+        ApplyButton.TextSize = 14
+        ApplyButton.Parent = ActionsFrame
+
+        local ApplyCorner = Instance.new("UICorner")
+        ApplyCorner.CornerRadius = UDim.new(0, 8)
+        ApplyCorner.Parent = ApplyButton
+
+        local ResetButton = Instance.new("TextButton")
+        ResetButton.Size = UDim2.new(0.48, 0, 1, 0)
+        ResetButton.Position = UDim2.new(0.52, 0, 0, 0)
+        ResetButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        ResetButton.Text = "СБРОС"
+        ResetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ResetButton.Font = Enum.Font.GothamBold
+        ResetButton.TextSize = 14
+        ResetButton.Parent = ActionsFrame
+
+        local ResetCorner = Instance.new("UICorner")
+        ResetCorner.CornerRadius = UDim.new(0, 8)
+        ResetCorner.Parent = ResetButton
+
+        ApplyButton.MouseButton1Click:Connect(function()
+            updateAllHitboxes()
+            ApplyButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            ApplyButton.Text = "ЗАЕБАШИЛ"
+            wait(1)
+            ApplyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+            ApplyButton.Text = "ЕБАШЬ"
+        end)
+
+        ResetButton.MouseButton1Click:Connect(function()
+            settings = table.clone(DEFAULT_SETTINGS)
+            updateEnabledToggle(settings.Enabled)
+            updatePlayerToggle(settings.PlayerHitbox)
+            updateWeaponToggle(settings.WeaponHitbox)
+            updateVisibleToggle(settings.Visible)
+            updateTeamToggle(settings.TeamCheck)
+            StatSize.Text = tostring(settings.Size)
+            updateAllHitboxes()
+            
+            ResetButton.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+            ResetButton.Text = "СБРОШЕНО"
+            wait(1)
+            ResetButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+            ResetButton.Text = "СБРОС"
+        end)
+
+        local dragging = false
+        local dragStart, startPos
+
+        Header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = MainContainer.Position
+            end
+        end)
+
+        Header.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+
+        Header.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input.Position - dragStart
+                MainContainer.Position = UDim2.new(
+                    startPos.X.Scale, 
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, 
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+
+        CloseButton.MouseButton1Click:Connect(function()
+            ScreenGui:Destroy()
+        end)
+
+        return ScreenGui, StatPlayers, StatHitboxes, StatStatus, StatSize
+    end)
+    
+    if not success then
+        warn(" Ошибка создания UI брат: " .. tostring(result))
+        return nil
+    end
+    
+    return result
+end
+
+local function findWeapons(character)
+    local weapons = {}
+    
+    local weaponNames = {
+        "Sword", "Blade", "Katana", "Weapon", "Tool", "Saber", "Knife",
+        "Sword1", "Sword2", "Blade1", "Katana1", "Weapon1", "Tool1"
+    }
+    
+    for _, name in pairs(weaponNames) do
+        local weapon = character:FindFirstChild(name)
+        if weapon then
+            table.insert(weapons, weapon)
+        end
+    end
+    
+    for _, child in pairs(character:GetChildren()) do
+        if child:IsA("Tool") then
+            table.insert(weapons, child)
+        end
+    end
+    
+    local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightHand")
+    if rightArm then
+        for _, tool in pairs(rightArm:GetChildren()) do
+            if tool:IsA("Tool") then
+                table.insert(weapons, tool)
+            end
+        end
+    end
+    
+    return weapons
+end
+
+local function createEnhancedHitbox(player)
+    if not settings.Enabled or player == localPlayer then return end
+    
+    if settings.TeamCheck and player.Team and localPlayer.Team and player.Team == localPlayer.Team then
+        return
+    end
+
+    local character = player.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+
+    if hitboxes[player] then
+        if hitboxes[player].PlayerHitbox then
+            hitboxes[player].PlayerHitbox:Destroy()
+        end
+        if hitboxes[player].WeaponHitbox then
+            hitboxes[player].WeaponHitbox:Destroy()
+        end
+    end
+
+    if settings.PlayerHitbox then
+        local playerHitbox = Instance.new("Part")
+        playerHitbox.Name = "PlayerHitbox_" .. player.UserId
+        playerHitbox.Size = Vector3.new(settings.Size, settings.Size, settings.Size)
+        playerHitbox.Transparency = settings.Transparency
+        playerHitbox.Color = settings.Color
+        playerHitbox.Anchored = false
+        playerHitbox.CanCollide = false
+        playerHitbox.Material = Enum.Material.Neon
+        playerHitbox.Parent = settings.Visible and character or nil
+
+        local weld = Instance.new("Weld")
+        weld.Part0 = rootPart
+        weld.Part1 = playerHitbox
+        weld.C0 = CFrame.new()
+        weld.Parent = playerHitbox
+
+        if not hitboxes[player] then
+            hitboxes[player] = {}
+        end
+        hitboxes[player].PlayerHitbox = playerHitbox
+    end
+
+    if settings.WeaponHitbox then
+        local weapons = findWeapons(character)
+        for _, weapon in pairs(weapons) do
+            local handle = weapon:FindFirstChild("Handle") or weapon:FindFirstChildOfClass("Part")
+            if handle then
+                local weaponHitbox = Instance.new("Part")
+                weaponHitbox.Name = "WeaponHitbox_" .. player.UserId
+                weaponHitbox.Size = Vector3.new(settings.Size * 0.8, settings.Size * 0.8, settings.Size * 1.2)
+                weaponHitbox.Transparency = settings.Transparency
+                weaponHitbox.Color = Color3.fromRGB(255, 255, 0) -- Желтый для оружия
+                weaponHitbox.Anchored = false
+                weaponHitbox.CanCollide = false
+                weaponHitbox.Material = Enum.Material.Neon
+                weaponHitbox.Parent = settings.Visible and weapon or nil
+
+                local weld = Instance.new("Weld")
+                weld.Part0 = handle
+                weld.Part1 = weaponHitbox
+                weld.C0 = CFrame.new()
+                weld.Parent = weaponHitbox
+
+                if not hitboxes[player] then
+                    hitboxes[player] = {}
+                end
+                hitboxes[player].WeaponHitbox = weaponHitbox
+            end
+        end
+    end
+end
+
+local function removePlayerHitboxes(player)
+    if hitboxes[player] then
+        if hitboxes[player].PlayerHitbox then
+            hitboxes[player].PlayerHitbox:Destroy()
+        end
+        if hitboxes[player].WeaponHitbox then
+            hitboxes[player].WeaponHitbox:Destroy()
+        end
+        hitboxes[player] = nil
+    end
+end
+
+local function clearAllHitboxes()
+    for player, _ in pairs(hitboxes) do
+        removePlayerHitboxes(player)
+    end
+    hitboxes = {}
+end
+
+local function updateAllHitboxes()
+    if not settings.Enabled then 
+        clearAllHitboxes()
+        return 
+    end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            createEnhancedHitbox(player)
+        end
+    end
+end
+
+local function onCharacterAdded(character)
+    local player = Players:GetPlayerFromCharacter(character)
+    if not player then return end
+
+    local success = pcall(function()
+        character:WaitForChild("HumanoidRootPart", 5)
+        wait(0.5) 
+        createEnhancedHitbox(player)
+    end)
+    
+    if not success then
+        warn("ошибка брат персонаж де нахуй" .. player.Name)
+    end
+end
+
+local function onPlayerAdded(player)
+    local connection
+    connection = player.CharacterAdded:Connect(function(character)
+        onCharacterAdded(character)
+    end)
+    
+    connections[player] = connection
+    
+    if player.Character then
+        spawn(function()
+            wait(1) -- Задержка для загрузки
+            onCharacterAdded(player.Character)
+        end)
+    end
+end
+
+local function onPlayerRemoving(player)
+    if connections[player] then
+        connections[player]:Disconnect()
+        connections[player] = nil
+    end
+    removePlayerHitboxes(player)
+end
+
+local UI, StatPlayers, StatHitboxes, StatStatus, StatSize = createEnhancedUI()
+
+if not UI then
+    warn("Не удалось создать UI бля")
+else
+    print("UI стартовал нахуй!")
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+RunService.Heartbeat:Connect(function()
+    if StatPlayers then
+        StatPlayers.Text = tostring(#Players:GetPlayers())
+    end
+    
+    local activeHitboxes = 0
+    for player, hitboxData in pairs(hitboxes) do
+        if hitboxData.PlayerHitbox and hitboxData.PlayerHitbox.Parent then
+            activeHitboxes = activeHitboxes + 1
+        end
+        if hitboxData.WeaponHitbox and hitboxData.WeaponHitbox.Parent then
+            activeHitboxes = activeHitboxes + 1
+        end
+    end
+    
+    if StatHitboxes then
+        StatHitboxes.Text = tostring(activeHitboxes)
+    end
+
+    if settings.Enabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer and player.Character then
+                local character = player.Character
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                
+                if humanoid and humanoid.Health > 0 and rootPart then
+                    if not hitboxes[player] then
+                        createEnhancedHitbox(player)
+                    else
+                        if settings.PlayerHitbox and (not hitboxes[player].PlayerHitbox or not hitboxes[player].PlayerHitbox.Parent) then
+                            createEnhancedHitbox(player)
+                        end
+                        if settings.WeaponHitbox and (not hitboxes[player].WeaponHitbox or not hitboxes[player].WeaponHitbox.Parent) then
+                            createEnhancedHitbox(player)
+                        end
+                    end
+                else
+                    removePlayerHitboxes(player)
+                end
+            end
+        end
+    end
+end)
+
+wait(2)
+updateAllHitboxes()
+
+print("Hitbox Expander GG запущен епт!")
+print("Версия: 1.0 | Игра: ZO SAMURAI SWORD FIGHTING")
+print("Player Хитбокс: " .. tostring(settings.PlayerHitbox))
+print("Katana хитбокс: " .. tostring(settings.WeaponHitbox))
+print("Размер: " .. tostring(settings.Size))
+print("GitHub: https://github.com/EuDaSko/HitboxSoftGG")
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Hitbox Expander GG",
+    Text = "Успешно активирован!",
+    Duration = 5,
+    Icon = "rbxassetid://0"
+})
